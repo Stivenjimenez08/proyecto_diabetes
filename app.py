@@ -5,7 +5,7 @@
 #   / (raíz)
 #   ├─ app.py
 #   ├─ modelo_diabetes.joblib
-#   ├─ preprocessor.joblib     <-- AQUÍ (en la raíz)
+#   ├─ preprocessor.joblib     <-- en la raíz (Opción 1)
 #   ├─ requirements.txt
 #   └─ (opcional) Artefactos/
 # =============================================================================
@@ -25,7 +25,7 @@ import joblib
 # --- Rutas robustas (relativas a este archivo) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "modelo_diabetes.joblib")      # en raíz
-PREPROC_PATH = os.path.join(BASE_DIR, "preprocessor.joblib")       # en raíz (Opción 1 solicitada)
+PREPROC_PATH = os.path.join(BASE_DIR, "preprocessor.joblib")       # en raíz
 
 # ===================== Panel de diagnóstico =====================
 with st.expander("🔎 Diagnóstico del entorno (clic para abrir)", expanded=True):
@@ -75,9 +75,90 @@ def load_modelos(model_path: str, preproc_path: str):
 
     return modelo, preprocessor
 
-# Intento de carga con manejo de errores visible en UI
+# --- helper: parchear OneHotEncoder para NumPy 2.x ---
+def _sanitize_onehot_for_numpy2(preprocessor):
+    """
+    Recorre el ColumnTransformer y, para cada OneHotEncoder,
+    convierte categories_ numéricas a float para que np.isnan no falle en NumPy 2.x.
+    """
+    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.pipeline import Pipeline
+
+    def _patch_encoder(enc: OneHotEncoder):
+        if not hasattr(enc, "categories_"):
+            return
+        new_cats = []
+        for cats in enc.categories_:
+            try:
+                # si es numérico (int/float/bool), lo pasamos a float
+                if np.issubdtype(cats.dtype, np.number) or np.issubdtype(cats.dtype, np.bool_):
+                    new_cats.append(cats.astype(float))
+                else:
+                    new_cats.append(cats)  # strings/objetos: los dejamos igual
+            except Exception:
+                new_cats.append(cats)
+        enc.categories_ = new_cats
+
+    # ColumnTransformer: lista (name, transformer, columns)
+    if hasattr(preprocessor, "transformers_"):
+        for _, trans, _ in preprocessor.transformers_:
+            if trans is None:
+                continue
+            # Pipeline con OneHot adentro
+            try:
+                from sklearn.pipeline import Pipeline
+                if isinstance(trans, Pipeline):
+                    for _, step in trans.steps:
+                        try:
+                            from sklearn.preprocessing import OneHotEncoder
+                            if isinstance(step, OneHotEncoder):
+                                _patch_encoder(step)
+                        except Exception:
+                            pass
+                else:
+                    from sklearn.preprocessing import OneHotEncoder
+                    if isinstance(trans, OneHotEncoder):
+                        _patch_encoder(trans)
+            except Exception:
+                pass
+
+def _get_categorical_cols_from_preprocessor(preprocessor):
+    """
+    Extrae nombres de columnas categóricas del preprocesador (si existen).
+    """
+    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.pipeline import Pipeline
+
+    cat_cols = []
+    if hasattr(preprocessor, "transformers_"):
+        for _, trans, cols in preprocessor.transformers_:
+            pipe_end = trans
+            if trans is None:
+                continue
+            try:
+                if isinstance(trans, Pipeline):
+                    pipe_end = trans.steps[-1][1]  # último step
+            except Exception:
+                pass
+            try:
+                if isinstance(pipe_end, OneHotEncoder):
+                    if isinstance(cols, (list, tuple)):
+                        cat_cols.extend(cols)
+            except Exception:
+                pass
+    # Quitar duplicados preservando orden
+    seen = set()
+    out = []
+    for c in cat_cols:
+        if c not in seen:
+            out.append(c)
+            seen.add(c)
+    return out
+
+# Intento de carga y parche
 try:
     modelo, preprocessor = load_modelos(MODEL_PATH, PREPROC_PATH)
+    _sanitize_onehot_for_numpy2(preprocessor)  # <--- parche clave para NumPy 2.x
 except Exception as e:
     st.error("❌ No se pudo cargar el modelo o el preprocesador.")
     st.caption("Revisa rutas, versiones de numpy/scikit-learn y que los artefactos estén en el repo.")
@@ -155,6 +236,15 @@ if uploaded_file is not None:
                 st.info(f"Se ignoraron {len(extra)} columnas no usadas: {extra}")
         else:
             df_aligned = df_nuevo
+
+        # (Opcional robusto): forzar dtype str en columnas categóricas según el preprocesador
+        cat_cols = _get_categorical_cols_from_preprocessor(preprocessor)
+        if cat_cols:
+            intersect = list(set(cat_cols) & set(df_aligned.columns))
+            for c in intersect:
+                mask = df_aligned[c].notna()
+                # convertimos solo los no-NaN a str para no convertir NaN al literal "nan"
+                df_aligned.loc[mask, c] = df_aligned.loc[mask, c].astype(str)
 
         # Botón de predicción
         if st.button("🔮 Realizar predicciones"):
