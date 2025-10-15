@@ -212,18 +212,17 @@ else:
 
 # ===================== Consejos de compatibilidad (opcional) =====================
 with st.expander("🧩 Ayuda: compatibilidad de versiones (opcional)"):
-    st.markdown(
-        "- Si ves errores tipo **BitGenerator** al cargar artefactos, alinea las versiones de **numpy** y "
-        "**scikit-learn** entre el entrenamiento y el despliegue, o re-exporta los artefactos con el stack del deployment.\n"
-        "- En Streamlit Cloud, mantén en la **raíz**:\n"
-        "  - `runtime.txt` → `3.12`\n"
-        "  - `requirements.txt` mínimo (por ejemplo):\n"
-        "    ```
-        streamlit==1.39.0
-        pandas==2.2.3
-        numpy==1.26.4
-        scikit-learn==1.5.2
-        joblib==1.4.2
-        ```\n"
-        "- Verifica arriba en el diagnóstico que los archivos y versiones coincidan."
-    )
+    st.markdown("""
+- Si ves errores tipo **BitGenerator** al cargar artefactos, alinea las versiones de **numpy** y
+  **scikit-learn** entre el entrenamiento y el despliegue, o re-exporta los artefactos con el
+  stack del deployment.
+- En Streamlit Cloud, mantén en la **raíz**:
+  - `runtime.txt` → `3.12`
+  - `requirements.txt` mínimo (por ejemplo):
+
+```text
+streamlit==1.39.0
+pandas==2.2.3
+numpy==1.26.4
+scikit-learn==1.5.2
+joblib==1.4.2
