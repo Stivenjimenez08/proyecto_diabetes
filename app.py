@@ -18,7 +18,6 @@ st.set_page_config(page_title="Predicción de Diabetes", layout="centered")
 import os
 import sys
 import platform
-import traceback
 import numpy as np
 import pandas as pd
 import joblib
@@ -209,20 +208,3 @@ if uploaded_file is not None:
         st.exception(e)
 else:
     st.info("Sube un CSV con los datos a evaluar.")
-
-# ===================== Consejos de compatibilidad (opcional) =====================
-with st.expander("🧩 Ayuda: compatibilidad de versiones (opcional)"):
-    st.markdown("""
-- Si ves errores tipo **BitGenerator** al cargar artefactos, alinea las versiones de **numpy** y
-  **scikit-learn** entre el entrenamiento y el despliegue, o re-exporta los artefactos con el
-  stack del deployment.
-- En Streamlit Cloud, mantén en la **raíz**:
-  - `runtime.txt` → `3.12`
-  - `requirements.txt` mínimo (por ejemplo):
-
-```text
-streamlit==1.39.0
-pandas==2.2.3
-numpy==1.26.4
-scikit-learn==1.5.2
-joblib==1.4.2
