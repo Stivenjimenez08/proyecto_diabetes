@@ -5,16 +5,16 @@
 #   / (raíz)
 #   ├─ app.py
 #   ├─ modelo_diabetes.joblib
+#   ├─ preprocessor.joblib     <-- AQUÍ (en la raíz)
 #   ├─ requirements.txt
-#   └─ Artefactos/
-#      └─ preprocessor.joblib
+#   └─ (opcional) Artefactos/
 # =============================================================================
 
 import streamlit as st
 st.set_page_config(page_title="Predicción de Diabetes", layout="centered")
 # ^ Debe ser el PRIMER comando de Streamlit
 
-# --- Imports estándar (sin usar st.* antes del set_page_config) ---
+# --- Imports estándar ---
 import os
 import sys
 import platform
@@ -22,10 +22,10 @@ import numpy as np
 import pandas as pd
 import joblib
 
-# --- Rutas robustas (relativas a este archivo, no al cwd) ---
+# --- Rutas robustas (relativas a este archivo) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "modelo_diabetes.joblib")                 # en raíz
-PREPROC_PATH = os.path.join(BASE_DIR, "Artefactos", "preprocessor.joblib")    # en /Artefactos
+MODEL_PATH = os.path.join(BASE_DIR, "modelo_diabetes.joblib")      # en raíz
+PREPROC_PATH = os.path.join(BASE_DIR, "preprocessor.joblib")       # en raíz (Opción 1 solicitada)
 
 # ===================== Panel de diagnóstico =====================
 with st.expander("🔎 Diagnóstico del entorno (clic para abrir)", expanded=True):
